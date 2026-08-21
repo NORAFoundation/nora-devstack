@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cmd="${1:-doctor}"
-case "$cmd" in
-  doctor) echo "NORA devstack scaffold: synthetic-only; production endpoints prohibited" ;;
-  up) docker compose -f "$ROOT/compose/docker-compose.yml" up -d ;;
-  down) docker compose -f "$ROOT/compose/docker-compose.yml" down ;;
-  reset) docker compose -f "$ROOT/compose/docker-compose.yml" down -v ;;
-  *) echo "usage: nora-dev {doctor|up|down|reset}" >&2; exit 2 ;;
-esac
+MONOREPO="$(cd "$ROOT/.." && pwd)"
+
+PYTHONPATH="$ROOT/src:$MONOREPO/nora-specification/src:$MONOREPO/nora-connectors/src:$MONOREPO/nora-evidence/src:$MONOREPO/nora-retrieval/src:$MONOREPO/nora-basis/src:$MONOREPO/nora-legal-research/src:$MONOREPO/nora-capabilities/src:$MONOREPO/nora-conformance/src:$MONOREPO/nora-capsules/src:$MONOREPO/nora-jurisdiction-packs/src:$MONOREPO/nora-evals/src:$MONOREPO/nora-orchestrator/src:$MONOREPO/nora-cli/src:${PYTHONPATH:-}" exec python3 -m nora_devstack.cli "$@"

@@ -1,0 +1,43 @@
+schema_version: 1
+updated_at: "2026-08-21T00:00:00Z"
+mode: synthetic-only
+components:
+  nora-basis:
+    commit: "37d6122d348a72560a839d3013b5ab883bc735af"
+    package: "nora_basis"
+  nora-capabilities:
+    commit: "ccfee927b8e123e09c1c019fefea4722f7578b1f"
+    package: "nora_capabilities"
+  nora-capsules:
+    commit: "62450659b19f1a97320384dd0bccb4abf91c63d8"
+    package: "nora_capsules"
+  nora-cli:
+    commit: "6df7e116ccd4f6c96f5acfcfad57497d43d4b8d5"
+    package: "nora_cli"
+  nora-conformance:
+    commit: "dc5ca33843d5f302a82389380bafce4ed33b394d"
+    package: "nora_conformance"
+  nora-connectors:
+    commit: "8b852b52f144485db5f117631aaee8772e3b5dce"
+    package: "nora_connectors"
+  nora-evals:
+    commit: "164ac42d88678129ed3ad918af6d1ae5abaac27e"
+    package: "nora_evals"
+  nora-evidence:
+    commit: "0e0533e01cddb05d672f96e47d9e4ffbdadbf583"
+    package: "nora_evidence"
+  nora-jurisdiction-packs:
+    commit: "fd4a9bd95dc41b02d540bad062baa58b4a09d187"
+    package: "nora_jurisdiction_packs"
+  nora-legal-research:
+    commit: "ec4f4dea315a9d619be9465d8af40d09246fcd3d"
+    package: "nora_legal_research"
+  nora-orchestrator:
+    commit: "e5663727acab8b50589ba1b9a6bd82e30b02103d"
+    package: "nora_orchestrator"
+  nora-retrieval:
+    commit: "448f2b80592f2e4a86abcd89c336fa667b58d52c"
+    package: "nora_retrieval"
+  nora-specification:
+    commit: "8bc95b179a36b64379f1eade257ed280185646c0"
+    package: "nora_specification"

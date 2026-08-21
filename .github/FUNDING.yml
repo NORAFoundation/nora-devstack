@@ -1,0 +1,3 @@
+# Funding & Sponsorship Configuration
+# Update custom URL when Stripe Payment Link activation completes
+custom: ["https://norafoundation.io/sponsor"]

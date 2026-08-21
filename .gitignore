@@ -17,3 +17,4 @@ node_modules/
 coverage.xml
 *.log
 .tmp/
+.devstack/
