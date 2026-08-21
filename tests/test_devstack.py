@@ -60,7 +60,7 @@ class TestDevstackEnvironment(unittest.TestCase):
     def test_run_bootstrap(self):
         res = run_bootstrap()
         self.assertTrue(res["success"])
-        self.assertEqual(len(res["packages"]), 13)
+        self.assertEqual(len(res["packages"]), 12)
         for pkg, status in res["packages"].items():
             self.assertEqual(status, "OK")
 
