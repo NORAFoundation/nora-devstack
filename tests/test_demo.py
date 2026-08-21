@@ -1,5 +1,6 @@
 """Unit and subprocess tests for nora-devstack seed and demo workflow execution."""
 
+import os
 import subprocess
 import sys
 import unittest
@@ -27,7 +28,9 @@ class TestDemoWorkflow(unittest.TestCase):
 
     def test_demo_subprocess_cli(self):
         cmd = [sys.executable, "-m", "nora_devstack.cli", "demo"]
-        res = subprocess.run(cmd, capture_output=True, text=True, cwd=DEVSTACK_DIR)
+        env = dict(os.environ)
+        env["PYTHONPATH"] = ":".join(sys.path)
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=DEVSTACK_DIR, env=env)
         self.assertEqual(res.returncode, 0, f"CLI demo subprocess failed: {res.stderr}")
         self.assertIn("NORA_DEMO_OK=1", res.stdout)
 

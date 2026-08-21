@@ -123,18 +123,17 @@ def check_git() -> tuple[bool, str]:
 
 
 def check_docker() -> tuple[bool, str]:
-    """Check Docker (optional)."""
+    """Check Docker (optional). Verify daemon responsiveness."""
     docker_bin = shutil.which("docker")
     if not docker_bin:
         return True, "Docker optional (not found in PATH)"
     try:
-        res = subprocess.run([docker_bin, "--version"], capture_output=True, text=True, timeout=5)
+        res = subprocess.run([docker_bin, "info"], capture_output=True, text=True, timeout=2)
         if res.returncode == 0:
-            return True, f"Docker available: {res.stdout.strip()}"
+            return True, "Docker daemon operational"
         return True, "Docker optional (daemon not running)"
     except Exception as e:
         return True, f"Docker optional ({e})"
-
 
 def check_sqlite() -> tuple[bool, str]:
     """Check SQLite python interface."""

@@ -106,7 +106,7 @@ def start_services() -> dict[str, Any]:
     compose_file = get_devstack_dir() / "compose" / "docker-compose.yml"
     docker_started = False
 
-    if "Docker available" in docker_msg and compose_file.exists():
+    if docker_msg == "Docker daemon operational" and compose_file.exists():
         try:
             res = subprocess.run(
                 ["docker", "compose", "-f", str(compose_file), "up", "-d"],

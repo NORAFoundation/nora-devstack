@@ -1,5 +1,6 @@
 """Unit and subprocess tests for nora-devstack orchestration and lockfile validation."""
 
+import os
 import subprocess
 import sys
 import unittest
@@ -120,17 +121,20 @@ class TestServicesLifecycle(unittest.TestCase):
 class TestSubprocessCLI(unittest.TestCase):
     def test_cli_doctor_subprocess(self):
         cmd = [sys.executable, "-m", "nora_devstack.cli", "doctor"]
-        res = subprocess.run(cmd, capture_output=True, text=True, cwd=DEVSTACK_DIR)
+        env = dict(os.environ)
+        env["PYTHONPATH"] = ":".join(sys.path)
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=DEVSTACK_DIR, env=env)
         self.assertEqual(res.returncode, 0, f"Doctor subprocess failed: {res.stderr}")
         self.assertIn("[OK]", res.stdout)
         self.assertIn("lockfile", res.stdout)
 
     def test_cli_bootstrap_subprocess(self):
         cmd = [sys.executable, "-m", "nora_devstack.cli", "bootstrap"]
-        res = subprocess.run(cmd, capture_output=True, text=True, cwd=DEVSTACK_DIR)
+        env = dict(os.environ)
+        env["PYTHONPATH"] = ":".join(sys.path)
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=DEVSTACK_DIR, env=env)
         self.assertEqual(res.returncode, 0, f"Bootstrap subprocess failed: {res.stderr}")
         self.assertIn("Devstack bootstrapped successfully", res.stdout)
-
     def test_script_nora_dev_doctor(self):
         script = DEVSTACK_DIR / "scripts" / "nora-dev"
         res = subprocess.run([str(script), "doctor"], capture_output=True, text=True, cwd=DEVSTACK_DIR)
