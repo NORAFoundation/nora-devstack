@@ -7,6 +7,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 EXPECTED_PACKAGES = [
     ("nora-basis", "nora_basis"),
@@ -19,7 +20,6 @@ EXPECTED_PACKAGES = [
     ("nora-evidence", "nora_evidence"),
     ("nora-jurisdiction-packs", "nora_jurisdiction_packs"),
     ("nora-legal-research", "nora_legal_research"),
-    ("nora-orchestrator", "nora_orchestrator"),
     ("nora-retrieval", "nora_retrieval"),
     ("nora-specification", "nora_specification"),
 ]
@@ -28,7 +28,6 @@ EXPECTED_PACKAGES = [
 def get_devstack_dir() -> Path:
     """Return Path to nora-devstack root directory."""
     curr = Path(__file__).resolve()
-    # Go up from src/nora_devstack/environment.py -> nora-devstack
     return curr.parents[2]
 
 
@@ -37,28 +36,49 @@ def get_monorepo_root() -> Path:
     return get_devstack_dir().parent
 
 
-def setup_monorepo_pythonpath() -> list[str]:
-    """Ensure all nora-*/src directories in monorepo are added to sys.path."""
-    monorepo = get_monorepo_root()
-    added = []
-    for pkg_dir in sorted(monorepo.glob("nora-*/src")):
-        p_str = str(pkg_dir.resolve())
-        if p_str not in sys.path:
-            sys.path.insert(0, p_str)
-            added.append(p_str)
-    # Also add current devstack src dir if not present
-    devstack_src = str((get_devstack_dir() / "src").resolve())
-    if devstack_src not in sys.path:
-        sys.path.insert(0, devstack_src)
-        added.append(devstack_src)
-    return added
-
-
 def get_state_dir() -> Path:
     """Return Path to managed local state directory (.devstack)."""
     state_dir = get_devstack_dir() / ".devstack"
     state_dir.mkdir(parents=True, exist_ok=True)
     return state_dir
+
+
+def get_components_dir() -> Path:
+    """Return Path to managed components directory (.devstack/components)."""
+    comp_dir = get_state_dir() / "components"
+    comp_dir.mkdir(parents=True, exist_ok=True)
+    return comp_dir
+
+
+def setup_monorepo_pythonpath() -> list[str]:
+    """Ensure all nora-*/src directories (sibling or .devstack/components/) are added to sys.path."""
+    monorepo = get_monorepo_root()
+    devstack_dir = get_devstack_dir()
+    components_dir = devstack_dir / ".devstack" / "components"
+    added = []
+
+    # 1. Check sibling monorepo directories
+    for pkg_dir in sorted(monorepo.glob("nora-*/src")):
+        p_str = str(pkg_dir.resolve())
+        if p_str not in sys.path:
+            sys.path.insert(0, p_str)
+            added.append(p_str)
+
+    # 2. Check managed .devstack/components directories
+    if components_dir.exists():
+        for pkg_dir in sorted(components_dir.glob("nora-*/src")):
+            p_str = str(pkg_dir.resolve())
+            if p_str not in sys.path:
+                sys.path.insert(0, p_str)
+                added.append(p_str)
+
+    # 3. Add current devstack src dir if not present
+    devstack_src = str((devstack_dir / "src").resolve())
+    if devstack_src not in sys.path:
+        sys.path.insert(0, devstack_src)
+        added.append(devstack_src)
+
+    return added
 
 
 def get_logs_dir() -> Path:
@@ -156,10 +176,59 @@ def run_bootstrap() -> dict[str, str | bool]:
     log_event("Executing nora-dev bootstrap")
     setup_monorepo_pythonpath()
 
+    # If running standalone, clone missing components from GitHub into .devstack/components/
+    components_dir = get_components_dir()
+    monorepo = get_monorepo_root()
+
+    import PyYAML  # YAML parser for lockfile
+    import yaml
+
+    lockfile_path = get_devstack_dir() / "components.lock.yaml"
+    if lockfile_path.exists():
+        with open(lockfile_path, "r", encoding="utf-8") as f:
+            lock_data = yaml.safe_load(f) or {}
+        components = lock_data.get("components", {})
+
+        for repo_name, meta in components.items():
+            if repo_name == "nora-orchestrator":
+                continue  # Orchestrator is private
+
+            sibling_path = monorepo / repo_name
+            comp_path = components_dir / repo_name
+
+            if not sibling_path.exists() and not comp_path.exists():
+                git_url = meta.get("git_url")
+                commit_sha = meta.get("commit_sha")
+                if git_url:
+                    log_event(f"Cloning {repo_name} from {git_url} into {comp_path}")
+                    try:
+                        subprocess.run(
+                            ["git", "clone", git_url, str(comp_path)],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
+                        if commit_sha:
+                            subprocess.run(
+                                ["git", "checkout", commit_sha],
+                                cwd=str(comp_path),
+                                check=True,
+                                capture_output=True,
+                                text=True,
+                            )
+                    except Exception as e:
+                        log_event(f"Failed to clone/checkout {repo_name}: {e}")
+
+    # Re-run pythonpath setup to capture newly cloned components
+    setup_monorepo_pythonpath()
+
     import_status = {}
     all_ok = True
 
-    for _, pkg_name in EXPECTED_PACKAGES:
+    for repo_name, pkg_name in EXPECTED_PACKAGES:
+        if repo_name == "nora-orchestrator":
+            continue  # Orchestrator is private
+
         try:
             mod = __import__(pkg_name)
             import_status[pkg_name] = "OK"
