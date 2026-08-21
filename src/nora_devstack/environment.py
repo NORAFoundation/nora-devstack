@@ -171,6 +171,32 @@ def run_doctor() -> dict[str, tuple[bool, str]]:
     return checks
 
 
+def _load_lockfile(lock_path: Path) -> dict:
+    if not lock_path.exists():
+        return {}
+    try:
+        import yaml
+
+        with open(lock_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        # Resilient fallback YAML parser for components lockfile
+        components = {}
+        content = lock_path.read_text(encoding="utf-8")
+        current_comp = None
+        for line in content.splitlines():
+            line_str = line.strip()
+            if not line_str or line_str.startswith("#"):
+                continue
+            if line_str.startswith("nora-"):
+                current_comp = line_str.split(":")[0].strip()
+                components[current_comp] = {}
+            elif current_comp and ":" in line_str:
+                k, v = line_str.split(":", 1)
+                components[current_comp][k.strip()] = v.strip().strip('"\'')
+        return {"components": components}
+
+
 def run_bootstrap() -> dict[str, str | bool]:
     """Clone/link component repositories into managed environment and verify package imports."""
     log_event("Executing nora-dev bootstrap")
@@ -180,44 +206,41 @@ def run_bootstrap() -> dict[str, str | bool]:
     components_dir = get_components_dir()
     monorepo = get_monorepo_root()
 
-    import PyYAML  # YAML parser for lockfile
-    import yaml
-
     lockfile_path = get_devstack_dir() / "components.lock.yaml"
-    if lockfile_path.exists():
-        with open(lockfile_path, "r", encoding="utf-8") as f:
-            lock_data = yaml.safe_load(f) or {}
-        components = lock_data.get("components", {})
+    lock_data = _load_lockfile(lockfile_path)
+    components = lock_data.get("components", {})
 
-        for repo_name, meta in components.items():
-            if repo_name == "nora-orchestrator":
-                continue  # Orchestrator is private
+    for repo_name, meta in components.items():
+        if repo_name == "nora-orchestrator":
+            continue  # Orchestrator is private
 
-            sibling_path = monorepo / repo_name
-            comp_path = components_dir / repo_name
+        sibling_path = monorepo / repo_name
+        comp_path = components_dir / repo_name
 
-            if not sibling_path.exists() and not comp_path.exists():
-                git_url = meta.get("git_url")
-                commit_sha = meta.get("commit_sha")
-                if git_url:
-                    log_event(f"Cloning {repo_name} from {git_url} into {comp_path}")
-                    try:
-                        subprocess.run(
-                            ["git", "clone", git_url, str(comp_path)],
-                            check=True,
-                            capture_output=True,
-                            text=True,
-                        )
-                        if commit_sha:
-                            subprocess.run(
-                                ["git", "checkout", commit_sha],
-                                cwd=str(comp_path),
-                                check=True,
-                                capture_output=True,
-                                text=True,
-                            )
-                    except Exception as e:
-                        log_event(f"Failed to clone/checkout {repo_name}: {e}")
+        if not sibling_path.exists() and not comp_path.exists():
+            git_url = meta.get("git_url") if isinstance(meta, dict) else None
+            commit_sha = meta.get("commit_sha") if isinstance(meta, dict) else None
+            if not git_url:
+                git_url = f"https://github.com/NORAFoundation/{repo_name}.git"
+
+            log_event(f"Cloning {repo_name} from {git_url} into {comp_path}")
+            try:
+                subprocess.run(
+                    ["git", "clone", git_url, str(comp_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                if commit_sha:
+                    subprocess.run(
+                        ["git", "checkout", commit_sha],
+                        cwd=str(comp_path),
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+            except Exception as e:
+                log_event(f"Failed to clone/checkout {repo_name}: {e}")
 
     # Re-run pythonpath setup to capture newly cloned components
     setup_monorepo_pythonpath()
