@@ -1,0 +1,8 @@
+schema_version: 1
+repository: nora-devstack
+policy: "source candidate != permission to copy"
+sources:
+  - reference: "NORAFoundation/nora-aapl@706494bf4ca4011027c365e38dccc8d747535030"
+    adoption_status: reconcile_required
+  - reference: "Platform/deployer scaffolds: reconcile before adoption"
+    adoption_status: reconcile_required
